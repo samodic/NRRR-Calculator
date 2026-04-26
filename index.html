@@ -1,81 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>NRRR Calculator</title>
+  <title>NRRR Tournament</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
 
   <style>
-    body {
-      font-family: Arial;
-      background: #f5f5f5;
-      text-align: center;
-      padding: 20px;
-    }
+    body { font-family: Arial; background:#f5f5f5; padding:12px; }
 
     .card {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      max-width: 350px;
-      margin: auto;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background:#fff; padding:12px; border-radius:10px;
+      max-width:520px; margin:auto; box-shadow:0 2px 8px rgba(0,0,0,0.1);
     }
 
-    label {
-      display: block;
-      text-align: left;
-      margin-top: 10px;
-      font-size: 14px;
-    }
+    h3 { margin:10px 0; }
 
     input {
-      width: 95%;
-      padding: 10px;
-      margin-top: 5px;
-      font-size: 16px;
+      width:100%; padding:8px; margin:6px 0; font-size:14px;
     }
 
     button {
-      padding: 10px 15px;
-      font-size: 16px;
-      border: none;
-      border-radius: 5px;
-      margin: 10px 5px 0 5px;
-      cursor: pointer;
+      padding:10px; margin-top:8px; width:100%;
+      border:none; border-radius:6px; color:#fff; font-size:14px;
+    }
+    .primary { background:blue; }
+    .reset { background:red; }
+
+    .scroll-x { overflow-x:auto; }
+
+    table {
+      border-collapse:collapse;
+      min-width:700px; /* enables horizontal scroll */
+      font-size:13px;
     }
 
-    .btn-primary {
-      background: blue;
-      color: white;
+    th, td {
+      border-bottom:1px solid #ddd;
+      padding:6px;
+      text-align:center;
+      white-space:nowrap;
     }
 
-    .btn-reset {
-      background: red;
-      color: white;
+    th { background:#eee; }
+
+    .leaderboard table {
+      min-width:0;
+      width:100%;
     }
 
-    .result {
-      margin-top: 15px;
-      font-size: 16px;
-    }
-
-    .nrrr-highlight {
-      margin-top: 20px;
-      font-size: 22px;
-      font-weight: bold;
-    }
-
-    .history {
-      margin-top: 15px;
-      font-size: 14px;
-      text-align: left;
-    }
-
-    .note {
-      font-size: 12px;
-      color: gray;
-      margin-bottom: 10px;
+    .highlight {
+      font-weight:bold;
     }
   </style>
 </head>
@@ -83,111 +56,149 @@
 <body>
 
 <div class="card">
-  <h2>NRRR Calculator</h2>
 
-  <div class="note">
-    All calculations are from <b>Team 1’s perspective</b>
+  <h3>Add Match</h3>
+
+  <input id="team1" placeholder="Team 1 Name">
+  <input id="team2" placeholder="Team 2 Name">
+
+  <input id="s1" type="number" placeholder="Team 1 Score">
+  <input id="s2" type="number" placeholder="Team 2 Score">
+
+  <input id="w2" type="number" placeholder="Team 2 Wickets">
+  <input id="o2" type="number" placeholder="Team 2 Overs">
+
+  <input id="p2" type="number" placeholder="Par Score (P2)">
+
+  <button class="primary" onclick="addMatch()">Add Match</button>
+  <button class="reset" onclick="resetAll()">Reset</button>
+
+  <!-- Leaderboard -->
+  <div class="leaderboard">
+    <h3>Leaderboard</h3>
+    <table id="leaderboard"></table>
   </div>
 
-  <label>Team 1 Score (S1)</label>
-  <input id="s1" type="number">
+  <!-- Matches -->
+  <h3>All Matches</h3>
+  <div class="scroll-x">
+    <table id="matchesTable"></table>
+  </div>
 
-  <label>Team 2 Score (S2)</label>
-  <input id="s2" type="number">
-
-  <label>Par Score for Team 2 (P2)</label>
-  <input id="p2" type="number">
-
-  <button class="btn-primary" onclick="calculate()">Add Match</button>
-  <button class="btn-reset" onclick="resetAll()">Reset</button>
-
-  <div class="result" id="rrr1"></div>
-  <div class="result" id="rrr2"></div>
-  <div class="nrrr-highlight" id="nrrr"></div>
-
-  <div class="history" id="history"></div>
 </div>
 
 <script>
 let matches = JSON.parse(localStorage.getItem("matches")) || [];
 
-function calculate() {
-  let s1Input = document.getElementById("s1");
-  let s2Input = document.getElementById("s2");
-  let p2Input = document.getElementById("p2");
+function addMatch() {
+  let team1 = team1Input.value.trim();
+  let team2 = team2Input.value.trim();
 
-  let S1 = parseFloat(s1Input.value);
-  let S2 = parseFloat(s2Input.value);
-  let P2 = parseFloat(p2Input.value);
+  let S1 = parseFloat(s1.value);
+  let S2 = parseFloat(s2.value);
+  let P2 = parseFloat(p2.value);
 
-  if (isNaN(S1) || isNaN(S2) || isNaN(P2) || P2 === 0) {
+  if (!team1 || !team2 || isNaN(S1) || isNaN(S2) || isNaN(P2) || P2 === 0) {
     alert("Invalid input");
     return;
   }
 
-  let rrr = (S1 / 100) * (1 - (S2 / P2));
+  let rrr = (S1/100)*(1 - (S2/P2));
 
-  // Store last 5 matches
-  matches.push(rrr);
-  if (matches.length > 5) matches.shift();
+  let p1 = S1 > S2 ? 2 : (S1 === S2 ? 1 : 0);
+  let p2v = S2 > S1 ? 2 : (S1 === S2 ? 1 : 0);
 
-  localStorage.setItem("matches", JSON.stringify(matches));
-
-  updateUI(rrr);
-
-  // Clear inputs
-  s1Input.value = "";
-  s2Input.value = "";
-  p2Input.value = "";
-  s1Input.focus();
-}
-
-function updateUI(latestRRR) {
-  let rrr_team1 = latestRRR;
-  let rrr_team2 = -latestRRR;
-
-  let nrrr_team1 = matches.reduce((a,b) => a + b, 0);
-
-  // RRR display
-  document.getElementById("rrr1").innerHTML =
-    "RRR (Team 1): " + rrr_team1.toFixed(4);
-
-  document.getElementById("rrr2").innerHTML =
-    "RRR (Team 2): " + rrr_team2.toFixed(4);
-
-  // Color-coded NRRR
-  let color = nrrr_team1 >= 0 ? "green" : "red";
-
-  document.getElementById("nrrr").innerHTML =
-    `<span style="color:${color}">
-      Final NRRR (Team 1): ${nrrr_team1.toFixed(4)}
-     </span>`;
-
-  // History
-  let historyText = "<b>Last Matches:</b><br>";
-  matches.forEach((m, i) => {
-    historyText += "Match " + (i+1) + ": " + m.toFixed(4) + "<br>";
+  matches.push({
+    team1, team2, S1, S2,
+    wickets: w2.value, overs: o2.value,
+    P2,
+    rrr1: rrr,
+    rrr2: -rrr,
+    p1, p2: p2v
   });
 
-  document.getElementById("history").innerHTML = historyText;
+  localStorage.setItem("matches", JSON.stringify(matches));
+  render();
+  clearInputs();
+}
+
+function render() {
+
+  // Leaderboard aggregation
+  let teams = {};
+
+  matches.forEach(m => {
+    if (!teams[m.team1]) teams[m.team1] = {pts:0, nrr:0};
+    if (!teams[m.team2]) teams[m.team2] = {pts:0, nrr:0};
+
+    teams[m.team1].pts += m.p1;
+    teams[m.team1].nrr += m.rrr1;
+
+    teams[m.team2].pts += m.p2;
+    teams[m.team2].nrr += m.rrr2;
+  });
+
+  // Sort leaderboard
+  let sorted = Object.entries(teams)
+    .sort((a,b) => b[1].pts - a[1].pts || b[1].nrr - a[1].nrr);
+
+  let lb = "<tr><th>Team</th><th>Points</th><th>NRR</th></tr>";
+  sorted.forEach(([t,v])=>{
+    lb += `<tr>
+      <td>${t}</td>
+      <td class="highlight">${v.pts}</td>
+      <td>${v.nrr.toFixed(3)}</td>
+    </tr>`;
+  });
+
+  document.getElementById("leaderboard").innerHTML = lb;
+
+  // Matches table
+  let mt = `
+  <tr>
+    <th>Sl</th>
+    <th>T1</th><th>T2</th>
+    <th>S1</th><th>S2</th>
+    <th>W2</th><th>O2</th>
+    <th>P2</th>
+    <th>Pts1</th><th>Pts2</th>
+    <th>RRR1</th><th>RRR2</th>
+  </tr>`;
+
+  matches.forEach((m,i)=>{
+    mt += `
+    <tr>
+      <td>${i+1}</td>
+      <td>${m.team1}</td>
+      <td>${m.team2}</td>
+      <td>${m.S1}</td>
+      <td>${m.S2}</td>
+      <td>${m.wickets}</td>
+      <td>${m.overs}</td>
+      <td>${m.P2}</td>
+      <td>${m.p1}</td>
+      <td>${m.p2}</td>
+      <td>${m.rrr1.toFixed(3)}</td>
+      <td>${m.rrr2.toFixed(3)}</td>
+    </tr>`;
+  });
+
+  document.getElementById("matchesTable").innerHTML = mt;
+}
+
+function clearInputs() {
+  document.querySelectorAll("input").forEach(i=>i.value="");
 }
 
 function resetAll() {
-  if (confirm("Reset all match data?")) {
+  if(confirm("Reset all data?")) {
     matches = [];
     localStorage.removeItem("matches");
-
-    document.getElementById("rrr1").innerHTML = "";
-    document.getElementById("rrr2").innerHTML = "";
-    document.getElementById("nrrr").innerHTML = "";
-    document.getElementById("history").innerHTML = "";
+    render();
   }
 }
 
-// Load previous state
-if (matches.length > 0) {
-  updateUI(matches[matches.length - 1]);
-}
+render();
 </script>
 
 </body>
