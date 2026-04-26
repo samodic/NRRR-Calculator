@@ -5,98 +5,162 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-    body { font-family: Arial; background:#f5f5f5; padding:12px; }
-
-    .card {
-      background:#fff; padding:12px; border-radius:10px;
-      max-width:520px; margin:auto; box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f4f7;
+      padding: 10px;
+      margin: 0;
     }
 
-    h3 { margin:10px 0; }
+    .container {
+      max-width: 520px;
+      margin: auto;
+    }
+
+    .card {
+      background: #fff;
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-bottom: 15px;
+    }
+
+    h3 {
+      margin: 10px 0 8px;
+      font-size: 18px;
+    }
 
     input {
-      width:100%; padding:8px; margin:6px 0; font-size:14px;
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
     }
 
     button {
-      padding:10px; margin-top:8px; width:100%;
-      border:none; border-radius:6px; color:#fff; font-size:14px;
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
     }
-    .primary { background:blue; }
-    .reset { background:red; }
 
-    .scroll-x { overflow-x:auto; }
+    .primary { background: #2563eb; color: white; }
+    .reset { background: #ef4444; color: white; }
+
+    .scroll {
+      overflow-x: auto;
+      margin-top: 10px;
+    }
 
     table {
-      border-collapse:collapse;
-      min-width:700px; /* enables horizontal scroll */
-      font-size:13px;
+      border-collapse: collapse;
+      min-width: 700px;
+      font-size: 13px;
     }
 
     th, td {
-      border-bottom:1px solid #ddd;
-      padding:6px;
-      text-align:center;
-      white-space:nowrap;
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      text-align: center;
+      white-space: nowrap;
     }
 
-    th { background:#eee; }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
 
     .leaderboard table {
-      min-width:0;
-      width:100%;
+      min-width: 0;
+      width: 100%;
     }
 
-    .highlight {
-      font-weight:bold;
+    .rank { font-weight: bold; }
+
+    .top { background: #e0f2fe; }
+
+    .impact {
+      font-size: 12px;
+      font-weight: bold;
     }
+
+    .up { color: green; }
+    .down { color: red; }
+
   </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="container">
 
-  <h3>Add Match</h3>
+  <!-- INPUT -->
+  <div class="card">
+    <h3>Add Match</h3>
 
-  <input id="team1" placeholder="Team 1 Name">
-  <input id="team2" placeholder="Team 2 Name">
+    <input id="team1" placeholder="Team 1 Name">
+    <input id="team2" placeholder="Team 2 Name">
 
-  <input id="s1" type="number" placeholder="Team 1 Score">
-  <input id="s2" type="number" placeholder="Team 2 Score">
+    <input id="s1" type="number" placeholder="Team 1 Score">
+    <input id="s2" type="number" placeholder="Team 2 Score">
 
-  <input id="w2" type="number" placeholder="Team 2 Wickets">
-  <input id="o2" type="number" placeholder="Team 2 Overs">
+    <input id="p2" type="number" placeholder="Par Score (P2)">
 
-  <input id="p2" type="number" placeholder="Par Score (P2)">
+    <button class="primary" onclick="addMatch()">Add Match</button>
+    <button class="reset" onclick="resetAll()">Reset</button>
+  </div>
 
-  <button class="primary" onclick="addMatch()">Add Match</button>
-  <button class="reset" onclick="resetAll()">Reset</button>
-
-  <!-- Leaderboard -->
-  <div class="leaderboard">
+  <!-- LEADERBOARD -->
+  <div class="card leaderboard">
     <h3>Leaderboard</h3>
     <table id="leaderboard"></table>
   </div>
 
-  <!-- Matches -->
-  <h3>All Matches</h3>
-  <div class="scroll-x">
-    <table id="matchesTable"></table>
+  <!-- MATCHES -->
+  <div class="card">
+    <h3>All Matches</h3>
+    <div class="scroll">
+      <table id="matchesTable"></table>
+    </div>
   </div>
 
 </div>
 
 <script>
+
 let matches = JSON.parse(localStorage.getItem("matches")) || [];
 
-function addMatch() {
-  let team1 = team1Input.value.trim();
-  let team2 = team2Input.value.trim();
+function computeTeams(list) {
+  let teams = {};
 
-  let S1 = parseFloat(s1.value);
-  let S2 = parseFloat(s2.value);
-  let P2 = parseFloat(p2.value);
+  list.forEach(m => {
+    if (!teams[m.team1]) teams[m.team1] = {pts:0, nrr:0};
+    if (!teams[m.team2]) teams[m.team2] = {pts:0, nrr:0};
+
+    teams[m.team1].pts += m.p1;
+    teams[m.team1].nrr += m.rrr1;
+
+    teams[m.team2].pts += m.p2;
+    teams[m.team2].nrr += m.rrr2;
+  });
+
+  return teams;
+}
+
+function addMatch() {
+
+  let team1 = document.getElementById("team1").value.trim();
+  let team2 = document.getElementById("team2").value.trim();
+
+  let S1 = parseFloat(document.getElementById("s1").value);
+  let S2 = parseFloat(document.getElementById("s2").value);
+  let P2 = parseFloat(document.getElementById("p2").value);
 
   if (!team1 || !team2 || isNaN(S1) || isNaN(S2) || isNaN(P2) || P2 === 0) {
     alert("Invalid input");
@@ -108,64 +172,67 @@ function addMatch() {
   let p1 = S1 > S2 ? 2 : (S1 === S2 ? 1 : 0);
   let p2v = S2 > S1 ? 2 : (S1 === S2 ? 1 : 0);
 
-  matches.push({
-    team1, team2, S1, S2,
-    wickets: w2.value, overs: o2.value,
-    P2,
+  let before = computeTeams(matches);
+  let beforeNRR = before[team1] ? before[team1].nrr : 0;
+
+  let newMatch = {
+    team1, team2, S1, S2, P2,
     rrr1: rrr,
     rrr2: -rrr,
-    p1, p2: p2v
-  });
+    p1, p2: p2v,
+    impact: {}
+  };
 
+  let after = computeTeams([...matches, newMatch]);
+  let afterNRR = after[team1].nrr;
+
+  newMatch.impact = {
+    before: beforeNRR,
+    after: afterNRR,
+    delta: afterNRR - beforeNRR
+  };
+
+  matches.push(newMatch);
   localStorage.setItem("matches", JSON.stringify(matches));
+
   render();
   clearInputs();
 }
 
 function render() {
 
-  // Leaderboard aggregation
-  let teams = {};
+  let teams = computeTeams(matches);
 
-  matches.forEach(m => {
-    if (!teams[m.team1]) teams[m.team1] = {pts:0, nrr:0};
-    if (!teams[m.team2]) teams[m.team2] = {pts:0, nrr:0};
-
-    teams[m.team1].pts += m.p1;
-    teams[m.team1].nrr += m.rrr1;
-
-    teams[m.team2].pts += m.p2;
-    teams[m.team2].nrr += m.rrr2;
-  });
-
-  // Sort leaderboard
   let sorted = Object.entries(teams)
-    .sort((a,b) => b[1].pts - a[1].pts || b[1].nrr - a[1].nrr);
+    .sort((a,b)=> b[1].pts - a[1].pts || b[1].nrr - a[1].nrr);
 
-  let lb = "<tr><th>Team</th><th>Points</th><th>NRR</th></tr>";
-  sorted.forEach(([t,v])=>{
-    lb += `<tr>
-      <td>${t}</td>
-      <td class="highlight">${v.pts}</td>
-      <td>${v.nrr.toFixed(3)}</td>
-    </tr>`;
+  let lb = "<tr><th>#</th><th>Team</th><th>Points</th><th>NRR</th></tr>";
+
+  sorted.forEach(([t,v],i)=>{
+    lb += `
+      <tr class="${i < 2 ? 'top' : ''}">
+        <td class="rank">${i+1}</td>
+        <td>${t}</td>
+        <td>${v.pts}</td>
+        <td>${v.nrr.toFixed(3)}</td>
+      </tr>`;
   });
 
   document.getElementById("leaderboard").innerHTML = lb;
 
-  // Matches table
   let mt = `
   <tr>
-    <th>Sl</th>
-    <th>T1</th><th>T2</th>
+    <th>Sl</th><th>T1</th><th>T2</th>
     <th>S1</th><th>S2</th>
-    <th>W2</th><th>O2</th>
     <th>P2</th>
-    <th>Pts1</th><th>Pts2</th>
     <th>RRR1</th><th>RRR2</th>
+    <th>Impact</th>
   </tr>`;
 
   matches.forEach((m,i)=>{
+    let cls = m.impact.delta >= 0 ? "up" : "down";
+    let arrow = m.impact.delta >= 0 ? "↑" : "↓";
+
     mt += `
     <tr>
       <td>${i+1}</td>
@@ -173,13 +240,13 @@ function render() {
       <td>${m.team2}</td>
       <td>${m.S1}</td>
       <td>${m.S2}</td>
-      <td>${m.wickets}</td>
-      <td>${m.overs}</td>
       <td>${m.P2}</td>
-      <td>${m.p1}</td>
-      <td>${m.p2}</td>
       <td>${m.rrr1.toFixed(3)}</td>
       <td>${m.rrr2.toFixed(3)}</td>
+      <td class="impact ${cls}">
+        ${m.impact.before.toFixed(3)} → ${m.impact.after.toFixed(3)}
+        (${arrow} ${m.impact.delta.toFixed(3)})
+      </td>
     </tr>`;
   });
 
@@ -187,11 +254,11 @@ function render() {
 }
 
 function clearInputs() {
-  document.querySelectorAll("input").forEach(i=>i.value="");
+  document.querySelectorAll("input").forEach(i => i.value = "");
 }
 
 function resetAll() {
-  if(confirm("Reset all data?")) {
+  if (confirm("Reset all data?")) {
     matches = [];
     localStorage.removeItem("matches");
     render();
@@ -199,6 +266,7 @@ function resetAll() {
 }
 
 render();
+
 </script>
 
 </body>
