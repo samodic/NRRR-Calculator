@@ -30,10 +30,19 @@
       font-size: 18px;
     }
 
-    input {
+    label {
+      display: block;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    input, select {
       width: 100%;
+      box-sizing: border-box; /* ✅ FIX overflow */
       padding: 10px;
-      margin: 6px 0;
+      margin-top: 4px;
       border-radius: 8px;
       border: 1px solid #ddd;
       font-size: 14px;
@@ -42,7 +51,7 @@
     button {
       width: 100%;
       padding: 12px;
-      margin-top: 8px;
+      margin-top: 10px;
       border: none;
       border-radius: 8px;
       font-size: 15px;
@@ -60,7 +69,7 @@
 
     table {
       border-collapse: collapse;
-      min-width: 700px;
+      min-width: 850px;
       font-size: 13px;
     }
 
@@ -82,7 +91,6 @@
     }
 
     .rank { font-weight: bold; }
-
     .top { background: #e0f2fe; }
 
     .impact {
@@ -104,13 +112,28 @@
   <div class="card">
     <h3>Add Match</h3>
 
-    <input id="team1" placeholder="Team 1 Name">
-    <input id="team2" placeholder="Team 2 Name">
+    <label>Team 1 Name</label>
+    <input id="team1">
 
-    <input id="s1" type="number" placeholder="Team 1 Score">
-    <input id="s2" type="number" placeholder="Team 2 Score">
+    <label>Team 2 Name</label>
+    <input id="team2">
 
-    <input id="p2" type="number" placeholder="Par Score (P2)">
+    <label>Team 1 Score</label>
+    <input id="s1" type="number">
+
+    <label>Team 2 Score</label>
+    <input id="s2" type="number">
+
+    <label>Par Score (P2)</label>
+    <input id="p2" type="number">
+
+    <label>Match Result (Team 1 perspective)</label>
+    <select id="result">
+      <option value="">Select Result</option>
+      <option value="win">Team 1 Win</option>
+      <option value="lose">Team 1 Lose</option>
+      <option value="draw">Draw / Tie</option>
+    </select>
 
     <button class="primary" onclick="addMatch()">Add Match</button>
     <button class="reset" onclick="resetAll()">Reset</button>
@@ -162,24 +185,44 @@ function addMatch() {
   let S2 = parseFloat(document.getElementById("s2").value);
   let P2 = parseFloat(document.getElementById("p2").value);
 
+  let result = document.getElementById("result").value;
+
   if (!team1 || !team2 || isNaN(S1) || isNaN(S2) || isNaN(P2) || P2 === 0) {
     alert("Invalid input");
     return;
   }
 
+  if (!result) {
+    alert("Select match result");
+    return;
+  }
+
   let rrr = (S1/100)*(1 - (S2/P2));
 
-  let p1 = S1 > S2 ? 2 : (S1 === S2 ? 1 : 0);
-  let p2v = S2 > S1 ? 2 : (S1 === S2 ? 1 : 0);
+  let p1, p2v;
+
+  if (result === "win") {
+    p1 = 2;
+    p2v = 0;
+  } else if (result === "lose") {
+    p1 = 0;
+    p2v = 2;
+  } else {
+    p1 = 1;
+    p2v = 1;
+  }
 
   let before = computeTeams(matches);
   let beforeNRR = before[team1] ? before[team1].nrr : 0;
 
   let newMatch = {
-    team1, team2, S1, S2, P2,
+    team1, team2,
+    S1, S2, P2,
     rrr1: rrr,
     rrr2: -rrr,
-    p1, p2: p2v,
+    p1,
+    p2: p2v,
+    result,
     impact: {}
   };
 
@@ -222,9 +265,11 @@ function render() {
 
   let mt = `
   <tr>
-    <th>Sl</th><th>T1</th><th>T2</th>
+    <th>Sl</th>
+    <th>T1</th><th>T2</th>
     <th>S1</th><th>S2</th>
     <th>P2</th>
+    <th>Pts1</th><th>Pts2</th>
     <th>RRR1</th><th>RRR2</th>
     <th>Impact</th>
   </tr>`;
@@ -241,6 +286,8 @@ function render() {
       <td>${m.S1}</td>
       <td>${m.S2}</td>
       <td>${m.P2}</td>
+      <td>${m.p1}</td>
+      <td>${m.p2}</td>
       <td>${m.rrr1.toFixed(3)}</td>
       <td>${m.rrr2.toFixed(3)}</td>
       <td class="impact ${cls}">
@@ -255,6 +302,7 @@ function render() {
 
 function clearInputs() {
   document.querySelectorAll("input").forEach(i => i.value = "");
+  document.getElementById("result").value = "";
 }
 
 function resetAll() {
